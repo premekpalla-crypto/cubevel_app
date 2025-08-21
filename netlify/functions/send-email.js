@@ -27,7 +27,7 @@ exports.handler = async (event) => {
 
     console.log("📦 Sestavuji zprávu...");
     const msg = {
-      to: data.to,
+      to: "info@cubevel.cz",
       from: "info@cubevel.cz",
       subject: data.subject,
       text: data.message,
@@ -66,4 +66,3 @@ exports.handler = async (event) => {
     };
   }
 };
-
