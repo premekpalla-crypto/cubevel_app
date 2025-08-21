@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Modlitební potřeba</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 150px;
+      font-size: 16px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+
+    .counter {
+      font-size: 14px;
+      color: gray;
+      margin-top: 5px;
+    }
+
+    #emailInput {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      margin-top: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    #emailInput:focus {
+      border-color: #0056b3;
+      outline: none;
+      box-shadow: 0 0 5px rgba(0, 86, 179, 0.5);
+    }
+
+    button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      background-color: #0056b3;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    .progress-container {
+      width: 100%;
+      background-color: #eee;
+      border-radius: 10px;
+      margin-top: 20px;
+      height: 25px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background-color: #28a745;
+      border-radius: 10px;
+      text-align: center;
+      color: white;
+      font-weight: bold;
+      line-height: 25px;
+      transition: width 0.4s;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      word-wrap: break-word;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background-color: #0056b3;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Napište svou modlitební potřebu</h2>
+
+<form id="prayerForm">
+  <textarea id="prayerInput" maxlength="1080" placeholder="Zde napište svou modlitbu (max. 1080 znaků)..."></textarea>
+  <div class="counter" id="counter">Zbývá: 1080 znaků</div>
+
+  <input type="email" id="emailInput" placeholder="Vaše e‑mailová adresa" required>
+
+  <button type="submit" id="submitBtn">Odeslat</button>
+</form>
+
+<div class="progress-container">
+  <div class="progress-bar" id="progressBar">0 / 33</div>
+</div>
+
+<h3>Přehled odeslaných potřeb</h3>
+<table id="prayersTable">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Text modlitby</th>
+      <th>Datum a čas</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<button onclick="downloadPDF()">📄 Stáhnout jako PDF</button>
+
+<script>
+  const textarea = document.getElementById("prayerInput");
+  const counter = document.getElementById("counter");
+  const emailInput = document.getElementById("emailInput");
+  const maxLength = 1080;
+
+  const progressBar = document.getElementById("progressBar");
+  let submissions = 0;
+  const maxSubmissions = 33;
+
+  const tableBody = document.querySelector("#prayersTable tbody");
+
+  textarea.addEventListener("input", () => {
+    const remaining = maxLength - textarea.value.length;
+    counter.textContent = `Zbývá: ${remaining} znaků`;
+  });
+
+  document.getElementById("prayerForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    if (submissions >= maxSubmissions) return;
+
+    const text = textarea.value.trim();
+    const email = emailInput.value.trim();
+
+    if (!text) {
+      alert("Formulář je prázdný, napište prosím svou modlitbu.");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      alert("Zadejte platnou e‑mailovou adresu.");
+      return;
+    }
+
+    try {
+      const res = await fetch("/.netlify/functions/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: email,
+          subject: "Modlitební potřeba",
+          message: text
+        })
+      });
+
+      const result = await res.json();
+
+      if (!res.ok || !result.success) {
+        alert("Chyba při odesílání: " + (result.error || "Neznámá chyba"));
+        return;
+      }
+
+      submissions++;
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${submissions}</td>
+        <td>${text}</td>
+        <td>${new Date().toLocaleString()}</td>
+      `;
+      tableBody.appendChild(row);
+
+      textarea.value = "";
+      emailInput.value = "";
+      counter.textContent = `Zbývá: ${maxLength} znaků`;
+
+      const percent = (submissions / maxSubmissions) * 100;
+      progressBar.style.width = percent + "%";
+      progressBar.textContent = `${submissions} / ${maxSubmissions}`;
+
+      if (submissions === maxSubmissions) {
+        document.getElementById("submitBtn").disabled = true;
+        alert("Dosáhli jste maximálního počtu 33 formulářů.");
+      }
+
+      alert("Vaše modlitební potřeba byla úspěšně odeslána na info@cubevel.cz.");
+    } catch (err) {
+      alert("Chyba připojení: " + err.message);
+    }
+  });
+
+  async function downloadPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.setFontSize(16);
+    doc.text("Seznam vašich modlitebních potřeb", 20, 20);
+
+    doc.setFontSize(12);
+    doc.text(`Pokrok: ${submissions} / ${maxSubmissions}`, 20, 30);
+    doc.setDrawColor(0);
+    doc.rect(20, 35, 100, 10);
+    doc.setFillColor(40, 167, 69);
+    doc.rect(20, 35, (100 * submissions / maxSubmissions), 10, "F");
+
+    let y = 55;
+    const rows = tableBody.querySelectorAll("tr");
+    rows.forEach((row) => {
+      const cols = row.querySelectorAll("td");
+      const line = `${cols[0].innerText}. ${cols[1].innerText} (${cols[2].innerText})`;
+      doc.text(line, 20, y, { maxWidth: 170 });
+      y += 10;
+      if (y > 270) { doc.addPage(); y = 20; }
+    });
+
+    doc.save("modlitebni_potreby.pdf");
+  }
+</script>
+
+</body>
+</html>
