@@ -30,8 +30,13 @@ exports.handler = async (event) => {
       to: "info@cubevel.cz",
       from: "info@cubevel.cz",
       subject: data.subject,
-      text: data.message,
-      html: `<p>${data.message}</p>`
+	  replyTo: data.email,
+      text: `${data.message}\n\nOd: ${data.name} <${data.email}>`,
+	html: `
+    <p>${data.message}</p>
+    <hr>
+    <p><strong>Od:</strong> ${data.name} &lt;${data.email}&gt;</p>
+  `
     };
 
     console.log("📤 Odesílám e‑mail...");
