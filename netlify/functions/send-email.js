@@ -1,73 +1,55 @@
 const sgMail = require("@sendgrid/mail");
 
-// Načtení API klíče z prostředí Netlify
-const apiKey = process.env.SENDGRID_API_KEY;
-console.log("🔑 API klíč:", apiKey ? "NALEZEN" : "CHYBÍ");
-
-sgMail.setApiKey(apiKey);
-
 exports.handler = async (event) => {
-  console.log("✅ Funkce byla spuštěna");
+  if (event.httpMethod !== "POST") {
+    return {
+      statusCode: 405,
+      body: "Method Not Allowed"
+    };
+  }
 
   try {
-    const data = JSON.parse(event.body || "{}");
+    const data = JSON.parse(event.body);
+
+    // Ladicí výpis
     console.log("📨 Přijatá data:", data);
 
-    if (!data.to || !data.subject || !data.message) {
-      console.warn("⚠️ Chybí některé pole");
+    // Ověření vstupů
+    if (!data.email || !data.name || !data.message) {
+      console.error("❌ Chybí povinné údaje");
       return {
         statusCode: 400,
-        headers: { "Access-Control-Allow-Origin": "*" },
-        body: JSON.stringify({
-          success: false,
-          error: "Chybí pole: to, subject nebo message"
-        })
+        body: "Missing required fields"
       };
     }
 
-    console.log("📦 Sestavuji zprávu...");
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
     const msg = {
-      to: "info@cubevel.cz",
-      from: "info@cubevel.cz",
-      subject: data.subject,
-	  replyTo: data.email,
+      to: "info@cubevel.cz",               // kam e‑mail dorazí
+      from: "info@cubevel.cz",             // ověřený odesílatel
+      replyTo: data.email,                 // zákazníkova adresa
+      subject: data.subject || "Nová modlitba",
       text: `${data.message}\n\nOd: ${data.name} <${data.email}>`,
-	html: `
-    <p>${data.message}</p>
-    <hr>
-    <p><strong>Od:</strong> ${data.name} &lt;${data.email}&gt;</p>
-  `
+      html: `
+        <p>${data.message}</p>
+        <hr>
+        <p><strong>Od:</strong> ${data.name} &lt;${data.email}&gt;</p>
+      `
     };
 
-    console.log("📤 Odesílám e‑mail...");
     const [response] = await sgMail.send(msg);
-
-    console.log("📬 SendGrid odpověď:", {
-      statusCode: response.statusCode,
-      headers: response.headers
-    });
-
-    if (response.statusCode !== 202) {
-      throw new Error("SendGrid nevrátil potvrzení o přijetí e‑mailu.");
-    }
+    console.log("📬 SendGrid odpověď:", response.statusCode);
 
     return {
       statusCode: 200,
-      headers: { "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({
-        success: true,
-        message: "E‑mail byl úspěšně odeslán."
-      })
+      body: JSON.stringify({ success: true, status: response.statusCode })
     };
   } catch (error) {
     console.error("❌ Chyba při odesílání:", error.response?.body || error.message);
     return {
       statusCode: 500,
-      headers: { "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({
-        success: false,
-        error: error.response?.body?.errors?.[0]?.message || error.message || "Neznámá chyba"
-      })
+      body: JSON.stringify({ success: false, error: error.message })
     };
   }
 };
