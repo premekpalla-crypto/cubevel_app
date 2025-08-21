@@ -29,6 +29,31 @@
       margin-top: 20px;
       font-weight: bold;
     }
+    #charCount {
+      text-align: right;
+      font-size: 0.9em;
+      color: #555;
+    }
+    #progressContainer {
+      margin-top: 20px;
+      background: #ddd;
+      border-radius: 4px;
+      height: 20px;
+      overflow: hidden;
+    }
+    #progressBar {
+      height: 100%;
+      width: 0%;
+      background: #0077cc;
+      transition: width 0.5s ease;
+    }
+    .fade-in {
+      animation: fadeIn 1s ease forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
   </style>
 </head>
 <body>
@@ -41,23 +66,43 @@
     <input type="email" id="email" name="email" required />
 
     <label for="message">Modlitba</label>
-    <textarea id="message" name="message" rows="5" required></textarea>
+    <textarea id="message" name="message" rows="5" maxlength="1080" required></textarea>
+    <div id="charCount">0 / 1080 znaků</div>
 
     <button type="submit">Odeslat</button>
   </form>
+
+  <div id="progressContainer">
+    <div id="progressBar"></div>
+  </div>
 
   <div class="message" id="responseMessage"></div>
 
   <script>
     const form = document.getElementById("prayerForm");
     const responseMessage = document.getElementById("responseMessage");
+    const messageField = document.getElementById("message");
+    const charCount = document.getElementById("charCount");
+    const progressBar = document.getElementById("progressBar");
+
+    let prayerCount = 0;
+    const maxPrayers = 33;
+
+    // Počítání znaků
+    messageField.addEventListener("input", () => {
+      const length = messageField.value.length;
+      charCount.textContent = `${length} / 1080 znaků`;
+      if (length >= 1080) {
+        messageField.value = messageField.value.substring(0, 1080);
+      }
+    });
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
       const name = form.name.value.trim();
       const email = form.email.value.trim();
-      const message = form.message.value.trim();
+      const message = messageField.value.trim();
 
       if (!name || !email || !message) {
         responseMessage.textContent = "Vyplň prosím všechna pole.";
@@ -79,8 +124,14 @@
         const result = await res.json();
 
         if (result.success) {
+          prayerCount = Math.min(prayerCount + 1, maxPrayers);
+          const progressPercent = Math.round((prayerCount / maxPrayers) * 100);
+          progressBar.style.width = `${progressPercent}%`;
+
           responseMessage.textContent = "Modlitba byla úspěšně odeslána. Děkujeme!";
+          responseMessage.classList.add("fade-in");
           form.reset();
+          charCount.textContent = "0 / 1080 znaků";
         } else {
           responseMessage.textContent = "Něco se pokazilo. Zkus to prosím znovu.";
         }
