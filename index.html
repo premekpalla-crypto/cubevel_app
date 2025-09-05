@@ -12,7 +12,48 @@
       padding: 20px;
       background: #f9f9f9;
       border-radius: 8px;
+		background-image: url("images/background.webp");
+		background-size: cover;
+		background-position: center;
+		background-repeat: no-repeat;
+		background-attachment: fixed;
     }
+	
+	h1 {
+	text-align: center;
+	}
+
+	.intro-text {
+	text-align: center;
+	font-size: 1.2rem; /* poloviční oproti h1 (které má defaultně ~2rem) */
+	max-width: 550px;
+	margin: 0 auto 20px auto;
+	line-height: 1.5;
+	color: #0077cc;
+	font-weight: 600;
+	}
+	
+	.info-text {
+	text-align: center;
+	font-size: 0.8rem; 
+	max-width: 500px;
+	margin: 0 auto 20px auto;
+	line-height: 1.2;
+	color: #444;
+	}
+	
+	.logo-container {
+	text-align: center;
+	margin-bottom: 20px;
+	}
+
+	.logo {
+	width: 30%;
+	max-width: 80px;
+	height: auto;
+	}
+
+	
     input, textarea, button {
       width: 100%;
       margin: 10px 0;
@@ -34,6 +75,34 @@
       font-size: 0.9em;
       color: #555;
     }
+	
+	#progressLabel {
+	text-align: center;
+	font-size: 0.95em;
+	margin-bottom: 5px;
+	color: #333;
+	}
+
+	.fade-in {
+	animation: fadeIn 1s ease forwards;
+	}
+
+	@keyframes fadeIn {
+	from { opacity: 0; transform: scale(0.95); }
+	to { opacity: 1; transform: scale(1); }
+	}
+
+	.pulse {
+	animation: pulse 0.6s ease;
+	}
+
+	@keyframes pulse {
+	0% { transform: scale(1); background-color: #0077cc; }
+	50% { transform: scale(1.05); background-color: #00aaff; }
+	100% { transform: scale(1); background-color: #0077cc; }
+	}
+
+	
     #progressContainer {
       margin-top: 20px;
       background: #ddd;
@@ -54,36 +123,100 @@
       from { opacity: 0; transform: scale(0.95); }
       to { opacity: 1; transform: scale(1); }
     }
+	
+	table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  background: white;
+}
+
+th, td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: left;
+  font-size: 0.9em;
+}
+
+th {
+  background-color: #0077cc;
+  color: white;
+}
+
+#downloadPdf {
+  margin-top: 10px;
+  padding: 10px;
+  background-color: #0077cc;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+	
   </style>
 </head>
 <body>
-  <h1>Pošli svou modlitbu</h1>
+
+  <div class="logo-container">
+  <img src="images/logo.png" alt="Logo Cubevel" class="logo" />
+	</div>
+  
+  <h1>Pošli svou modlitební potřebu,
+      poděkování nebo požehnání. </h1>
+	  
+	 <p class="intro-text">
+	Napiš tolik modlitebních textů, kolik jsi objednal kostek.<br>
+	<br>
+	</p>
+	<p class="info-text">
+	Údaje a info z tohoto formuláře jsou naprosto důvěrné, a nikde se nezveřejňují.<br>
+	Jméno, příjmení a emailová adresa musí být stejná, jako na objednávce.<br>
+	</p>
+
+	  
   <form id="prayerForm">
-    <label for="name">Jméno</label>
+    <label for="name">Jméno a příjmení </label>
     <input type="text" id="name" name="name" required />
 
     <label for="email">E‑mail</label>
     <input type="email" id="email" name="email" required />
 
-    <label for="message">Modlitba</label>
+    <label for="message">Modlitební text</label>
     <textarea id="message" name="message" rows="5" maxlength="1080" required></textarea>
     <div id="charCount">0 / 1080 znaků</div>
 
     <button type="submit">Odeslat</button>
   </form>
 
+  <div id="progressLabel">0 / 33 modliteb</div>
   <div id="progressContainer">
     <div id="progressBar"></div>
   </div>
+  
+    <h2>Odeslané modlitby</h2>
+<table id="prayerTable">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Text modlitby</th>
+      <th>Datum a čas</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
 
+<button id="downloadPdf">Stáhnout jako PDF</button>
+  
   <div class="message" id="responseMessage"></div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script>
     const form = document.getElementById("prayerForm");
     const responseMessage = document.getElementById("responseMessage");
     const messageField = document.getElementById("message");
     const charCount = document.getElementById("charCount");
     const progressBar = document.getElementById("progressBar");
+	const progressLabel = document.getElementById("progressLabel");
 
     let prayerCount = 0;
     const maxPrayers = 33;
@@ -127,9 +260,10 @@
           prayerCount = Math.min(prayerCount + 1, maxPrayers);
           const progressPercent = Math.round((prayerCount / maxPrayers) * 100);
           progressBar.style.width = `${progressPercent}%`;
+		  progressLabel.textContent = `${prayerCount} / ${maxPrayers} modliteb`;
 
           responseMessage.textContent = "Modlitba byla úspěšně odeslána. Děkujeme!";
-          responseMessage.classList.add("fade-in");
+          responseMessage.classList.add("fade-in", "pulse");
           form.reset();
           charCount.textContent = "0 / 1080 znaků";
         } else {
@@ -140,6 +274,24 @@
         responseMessage.textContent = "Nepodařilo se odeslat. Zkus to prosím později.";
       }
     });
+	
+	// PDF export
+	downloadBtn.addEventListener("click", () => {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.text("Odeslané modlitby", 14, 20);
+
+    let y = 30;
+    Array.from(tableBody.rows).forEach((row, index) => {
+      const cols = Array.from(row.cells).map(cell => cell.textContent);
+      doc.text(`${cols[0]}. ${cols[1]} (${cols[2]})`, 14, y);
+      y += 10;
+    });
+
+    doc.save("modlitby.pdf");
+  });
+	
   </script>
 </body>
 </html>
