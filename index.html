@@ -230,6 +230,9 @@ th {
       }
     });
 
+	const tableBody = document.querySelector("#prayerTable tbody");
+	const downloadBtn = document.getElementById("downloadPdf");
+	
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
@@ -266,6 +269,17 @@ th {
           responseMessage.classList.add("fade-in", "pulse");
           form.reset();
           charCount.textContent = "0 / 1080 znaků";
+		  
+	// Přidání do tabulky
+        const now = new Date();
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${prayerCount}</td>
+          <td>${message}</td>
+          <td>${now.toLocaleString("cs-CZ")}</td>
+        `;
+        tableBody.appendChild(row);	  
+	
         } else {
           responseMessage.textContent = "Něco se pokazilo. Zkus to prosím znovu.";
         }
